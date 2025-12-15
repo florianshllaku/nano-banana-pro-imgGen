@@ -5,7 +5,6 @@
 const HIGGSFIELD_BASE = "https://platform.higgsfield.ai";
 const POLL_INTERVAL_MS = 20000; // 20 seconds
 const MAX_POLL_ATTEMPTS = 30; // 10 minutes max (30 * 20s)
-const CALLBACK_2_DELAY_MS = 15000; // 15 seconds delay before triggering flow
 
 type JobStatus = "polling" | "succeeded" | "failed" | "cancelled";
 
@@ -181,48 +180,8 @@ async function sendCallback(job: Job): Promise<void> {
     console.error(`[job-tracker] ❌ CALLBACK 1 ERROR:`, error);
   }
 
-  // ========================================
-  // CALLBACK 2: Trigger flow to send message
-  // ========================================
-  // Wait 15 seconds before triggering flow
-  console.log(`[job-tracker] ----------------------------------------`);
-  console.log(`[job-tracker] Waiting ${CALLBACK_2_DELAY_MS / 1000} seconds before Callback 2...`);
-  await new Promise((resolve) => setTimeout(resolve, CALLBACK_2_DELAY_MS));
-  
-  const flowId = process.env.CHATGPT_BUILDER_FLOW_ID || "1760629479392";
-  const triggerFlowUrl = `https://app.chatgptbuilder.io/api/contacts/${job.contactId}/send/${flowId}`;
-
-  console.log(`[job-tracker] CALLBACK 2: Trigger Flow`);
-  console.log(`[job-tracker] URL: ${triggerFlowUrl}`);
-  console.log(`[job-tracker] Method: POST`);
-  console.log(`[job-tracker] Headers: { "Accept": "application/json", "X-ACCESS-TOKEN": "${accessToken.substring(0, 10)}..." }`);
-  console.log(`[job-tracker] Body: (empty)`);
-
-  try {
-    const response = await fetch(triggerFlowUrl, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "X-ACCESS-TOKEN": accessToken,
-      },
-    });
-
-    const responseText = await response.text().catch(() => "");
-    
-    console.log(`[job-tracker] Response Status: ${response.status}`);
-    console.log(`[job-tracker] Response Body: ${responseText}`);
-
-    if (response.ok) {
-      console.log(`[job-tracker] ✅ CALLBACK 2 SUCCESS`);
-    } else {
-      console.error(`[job-tracker] ❌ CALLBACK 2 FAILED - Status: ${response.status}`);
-    }
-  } catch (error) {
-    console.error(`[job-tracker] ❌ CALLBACK 2 ERROR:`, error);
-  }
-
   console.log(`[job-tracker] ========================================`);
-  console.log(`[job-tracker] CALLBACKS COMPLETED FOR JOB: ${job.requestId}`);
+  console.log(`[job-tracker] CALLBACK COMPLETED FOR JOB: ${job.requestId}`);
   console.log(`[job-tracker] ========================================`);
 }
 
