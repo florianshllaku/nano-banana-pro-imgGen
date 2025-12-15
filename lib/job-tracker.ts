@@ -68,15 +68,34 @@ async function checkJobStatus(job: Job): Promise<void> {
     }
 
     const status = payload?.status || payload?.state;
-    const images = payload?.image_urls || payload?.outputs || payload?.result || [];
+    
+    // Extract images - handle multiple formats:
+    // Format 1: payload.images = [{ url: "..." }, { url: "..." }]
+    // Format 2: payload.image_urls = ["...", "..."]
+    // Format 3: payload.outputs = ["...", "..."]
+    let images: string[] = [];
+    
+    if (payload?.images && Array.isArray(payload.images)) {
+      // Handle { url: "..." } format
+      images = payload.images.map((img: { url?: string } | string) => 
+        typeof img === "object" && img.url ? img.url : (typeof img === "string" ? img : "")
+      ).filter(Boolean);
+    } else if (payload?.image_urls) {
+      images = Array.isArray(payload.image_urls) ? payload.image_urls : [];
+    } else if (payload?.outputs) {
+      images = Array.isArray(payload.outputs) ? payload.outputs : [];
+    } else if (payload?.result) {
+      images = Array.isArray(payload.result) ? payload.result : [];
+    }
 
-    console.log(`[job-tracker] Job ${job.requestId} - Status: ${status}, Poll #${job.pollCount + 1}`);
+    console.log(`[job-tracker] Job ${job.requestId} - Status: ${status}, Poll #${job.pollCount + 1}, Images: ${images.length}`);
 
-    if (status === "succeeded") {
+    // Check for completion - Higgsfield uses "completed" not "succeeded"
+    if (status === "completed" || status === "succeeded") {
       job.status = "succeeded";
-      job.images = Array.isArray(images) ? images : [];
+      job.images = images;
       job.completedAt = new Date();
-      console.log(`[job-tracker] ✓ Job ${job.requestId} succeeded with ${job.images.length} image(s)`);
+      console.log(`[job-tracker] ✓ Job ${job.requestId} completed with ${job.images.length} image(s)`);
       
       // Send callback to ChatGPT Builder
       await sendCallback(job);

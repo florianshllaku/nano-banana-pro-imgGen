@@ -78,8 +78,23 @@ async function handler(
     }
 
     const state = payload?.status || payload?.state;
-    const images =
-      payload?.image_urls || payload?.outputs || payload?.result || [];
+    
+    // Extract images - handle multiple formats:
+    // Format 1: payload.images = [{ url: "..." }, { url: "..." }]
+    // Format 2: payload.image_urls = ["...", "..."]
+    let images: string[] = [];
+    
+    if (payload?.images && Array.isArray(payload.images)) {
+      images = (payload.images as Array<{ url?: string } | string>).map((img) => 
+        typeof img === "object" && img.url ? img.url : (typeof img === "string" ? img : "")
+      ).filter(Boolean);
+    } else if (payload?.image_urls) {
+      images = Array.isArray(payload.image_urls) ? payload.image_urls : [];
+    } else if (payload?.outputs) {
+      images = Array.isArray(payload.outputs) ? payload.outputs : [];
+    } else if (payload?.result) {
+      images = Array.isArray(payload.result) ? payload.result : [];
+    }
 
     return res.status(200).json({
       requestId,
