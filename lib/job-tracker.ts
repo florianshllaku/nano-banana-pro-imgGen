@@ -112,16 +112,18 @@ async function sendCallback(job: Job): Promise<void> {
     return;
   }
 
-  const callbackUrl = `https://app.chatgptbuilder.io/api/contacts/${job.contactId}/custom_fields/871218`;
   const accessToken = process.env.CHATGPT_BUILDER_TOKEN || "1234372.w5LIIOK11XiUEEU4X6qnzjvwE7YXpQ0x";
+  const imageUrl = job.images[0];
+
+  // ========================================
+  // CALLBACK 1: Save image URL to custom field
+  // ========================================
+  const customFieldUrl = `https://app.chatgptbuilder.io/api/contacts/${job.contactId}/custom_fields/871218`;
 
   try {
-    // Send the first image URL (or all if multiple)
-    const imageUrl = job.images[0];
+    console.log(`[job-tracker] Callback 1: Saving image to custom field for job ${job.requestId}`);
 
-    console.log(`[job-tracker] Sending callback for job ${job.requestId} to ${callbackUrl}`);
-
-    const response = await fetch(callbackUrl, {
+    const response = await fetch(customFieldUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -133,13 +135,40 @@ async function sendCallback(job: Job): Promise<void> {
     });
 
     if (response.ok) {
-      console.log(`[job-tracker] ✓ Callback sent successfully for job ${job.requestId}`);
+      console.log(`[job-tracker] ✓ Callback 1 success: Image saved for job ${job.requestId}`);
     } else {
       const errorText = await response.text().catch(() => "Unknown error");
-      console.error(`[job-tracker] ✗ Callback failed for job ${job.requestId}:`, response.status, errorText);
+      console.error(`[job-tracker] ✗ Callback 1 failed for job ${job.requestId}:`, response.status, errorText);
     }
   } catch (error) {
-    console.error(`[job-tracker] ✗ Callback error for job ${job.requestId}:`, error);
+    console.error(`[job-tracker] ✗ Callback 1 error for job ${job.requestId}:`, error);
+  }
+
+  // ========================================
+  // CALLBACK 2: Trigger flow to send message
+  // ========================================
+  const flowId = process.env.CHATGPT_BUILDER_FLOW_ID || "1760629479392";
+  const triggerFlowUrl = `https://app.chatgptbuilder.io/api/contacts/${job.contactId}/send/${flowId}`;
+
+  try {
+    console.log(`[job-tracker] Callback 2: Triggering flow ${flowId} for contact ${job.contactId}`);
+
+    const response = await fetch(triggerFlowUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-ACCESS-TOKEN": accessToken,
+      },
+    });
+
+    if (response.ok) {
+      console.log(`[job-tracker] ✓ Callback 2 success: Flow triggered for job ${job.requestId}`);
+    } else {
+      const errorText = await response.text().catch(() => "Unknown error");
+      console.error(`[job-tracker] ✗ Callback 2 failed for job ${job.requestId}:`, response.status, errorText);
+    }
+  } catch (error) {
+    console.error(`[job-tracker] ✗ Callback 2 error for job ${job.requestId}:`, error);
   }
 }
 
