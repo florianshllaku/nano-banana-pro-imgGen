@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { withMiddleware } from "../../lib/middleware";
 
 type HiggsfieldSubmitResponse = {
   request_id?: string;
@@ -35,7 +36,7 @@ export const config = {
   },
 };
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
@@ -204,4 +205,6 @@ export default async function handler(
     return res.status(500).json({ error: message });
   }
 }
+
+export default withMiddleware(handler);
 
