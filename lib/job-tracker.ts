@@ -3,8 +3,9 @@
  */
 
 const HIGGSFIELD_BASE = "https://platform.higgsfield.ai";
-const POLL_INTERVAL_MS = 15000; // 15 seconds
-const MAX_POLL_ATTEMPTS = 40; // 10 minutes max (40 * 15s)
+const POLL_INTERVAL_MS = 20000; // 20 seconds
+const MAX_POLL_ATTEMPTS = 30; // 10 minutes max (30 * 20s)
+const CALLBACK_2_DELAY_MS = 15000; // 15 seconds delay before triggering flow
 
 type JobStatus = "polling" | "succeeded" | "failed" | "cancelled";
 
@@ -183,10 +184,14 @@ async function sendCallback(job: Job): Promise<void> {
   // ========================================
   // CALLBACK 2: Trigger flow to send message
   // ========================================
+  // Wait 15 seconds before triggering flow
+  console.log(`[job-tracker] ----------------------------------------`);
+  console.log(`[job-tracker] Waiting ${CALLBACK_2_DELAY_MS / 1000} seconds before Callback 2...`);
+  await new Promise((resolve) => setTimeout(resolve, CALLBACK_2_DELAY_MS));
+  
   const flowId = process.env.CHATGPT_BUILDER_FLOW_ID || "1760629479392";
   const triggerFlowUrl = `https://app.chatgptbuilder.io/api/contacts/${job.contactId}/send/${flowId}`;
 
-  console.log(`[job-tracker] ----------------------------------------`);
   console.log(`[job-tracker] CALLBACK 2: Trigger Flow`);
   console.log(`[job-tracker] URL: ${triggerFlowUrl}`);
   console.log(`[job-tracker] Method: POST`);
