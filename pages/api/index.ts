@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { withCors } from "../../lib/middleware";
 
 /**
- * Root endpoint - redirects to API documentation or returns API info
+ * Root API endpoint - returns API info
  */
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+function handler(req: NextApiRequest, res: NextApiResponse) {
   res.status(200).json({
     name: "SparkAI Fashion API",
     version: "0.1.0",
@@ -15,4 +16,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     documentation: "See README.md for full API documentation",
   });
 }
+
+export default withCors(handler);
+
+
 

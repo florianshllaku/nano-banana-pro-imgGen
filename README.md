@@ -66,7 +66,7 @@ Returns server status. No authentication required.
 POST /api/generate
 ```
 
-Submit an image generation request to Higgsfield AI.
+Submit an image generation request to Higgsfield AI. The server will **automatically poll** for completion and send a callback when the image is ready.
 
 **Headers:**
 | Header | Required | Description |
@@ -78,33 +78,43 @@ Submit an image generation request to Higgsfield AI.
 ```json
 {
   "prompt": "editorial fashion shot, golden hour lighting",
+  "aspect": "4:3",
+  "contact_id": "12345",
+  "user_id": "user-abc",
   "imageUrls": ["https://example.com/reference1.jpg", "https://example.com/reference2.jpg"],
   "resolution": "2k",
-  "aspect": "4:3",
   "format": "png",
-  "numImages": 1,
-  "modelId": "nano-banana-pro/edit"
+  "numImages": 1
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `prompt` | string | Yes | Text prompt for generation |
+| `prompt` | string | **Yes** | Text prompt for generation |
+| `aspect` | string | **Yes** | Aspect ratio: `4:3`, `4:5`, `5:4` |
+| `contact_id` | string | **Yes** | Contact ID from third-party platform |
+| `user_id` | string | **Yes** | User ID from third-party platform |
 | `imageUrls` | string[] | No | Reference image URLs (max 2) |
 | `resolution` | string | No | `1k`, `2k`, or `4k` (default: `2k`) |
-| `aspect` | string | Yes | Aspect ratio: `4:3`, `4:5`, `5:4` |
 | `format` | string | No | Output format: `jpg` or `png` (default: `png`) |
 | `numImages` | number | No | Number of images (default: 1) |
-| `modelId` | string | No | Higgsfield model ID |
 
 **Response (202 Accepted):**
 ```json
 {
   "requestId": "abc123-def456",
+  "contact_id": "12345",
+  "user_id": "user-abc",
   "status": "queued",
-  "message": "Queued. Use /api/status to refresh."
+  "message": "Queued. Server will auto-poll and send callback when ready.",
+  "autoPolling": true
 }
 ```
+
+**Auto-Polling Behavior:**
+- Server polls Higgsfield every **15 seconds**
+- When image is ready, sends callback to ChatGPT Builder
+- Max polling time: ~10 minutes (40 attempts)
 
 ---
 

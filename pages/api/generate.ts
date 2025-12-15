@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { withMiddleware } from "../../lib/middleware";
+import { addJob } from "../../lib/job-tracker";
 
 type HiggsfieldSubmitResponse = {
   request_id?: string;
@@ -52,18 +53,29 @@ async function handler(
     format = "png",
     numImages = 1,
     modelId,
+    contact_id,
+    user_id,
   } = req.body || {};
 
+  // Validate required fields
   if (!prompt || typeof prompt !== "string") {
-    return res.status(400).json({ error: "Prompt is required" });
-  }
-
-  if (!["1k", "2k", "4k"].includes(String(resolution).toLowerCase())) {
-    return res.status(400).json({ error: "Resolution must be 1k, 2k, or 4k" });
+    return res.status(400).json({ error: "prompt is required" });
   }
 
   if (!aspect || typeof aspect !== "string") {
-    return res.status(400).json({ error: "Aspect ratio is required" });
+    return res.status(400).json({ error: "aspect is required (e.g., '4:3', '4:5', '5:4')" });
+  }
+
+  if (!contact_id || typeof contact_id !== "string") {
+    return res.status(400).json({ error: "contact_id is required" });
+  }
+
+  if (!user_id || typeof user_id !== "string") {
+    return res.status(400).json({ error: "user_id is required" });
+  }
+
+  if (!["1k", "2k", "4k"].includes(String(resolution).toLowerCase())) {
+    return res.status(400).json({ error: "resolution must be 1k, 2k, or 4k" });
   }
 
   const keyId = process.env.HIGGSFIELD_KEY_ID;
@@ -94,7 +106,7 @@ async function handler(
 
   try {
     const totalImageChars = Array.isArray(imageUrls)
-      ? imageUrls.reduce((acc, v) => acc + String(v).length, 0)
+      ? imageUrls.reduce((acc: number, v: string) => acc + String(v).length, 0)
       : 0;
 
     console.log("[generate] submit ->", {
@@ -105,6 +117,8 @@ async function handler(
       resolution,
       aspect,
       format,
+      contact_id,
+      user_id,
       authMode: bearer ? "bearer" : keyId && keySecret ? "key" : "unknown",
     });
 
@@ -190,21 +204,25 @@ async function handler(
       });
     }
 
-    // Poll for completion
-    // Return early with the requestId; client can poll /api/status
+    // Add job to tracker for auto-polling
+    // This will automatically poll Higgsfield every 15 seconds
+    // and send callback to ChatGPT Builder when image is ready
+    addJob(requestId, contact_id, user_id);
+
     return res.status(202).json({
       requestId,
+      contact_id,
+      user_id,
       status: "queued",
-      message: "Queued. Use /api/status to refresh.",
-      queued: submitJson,
-      polled: false,
+      message: "Queued. Server will auto-poll and send callback when ready.",
+      autoPolling: true,
     });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unexpected server error";
+    console.error("[generate] Error:", message);
     return res.status(500).json({ error: message });
   }
 }
 
 export default withMiddleware(handler);
-
